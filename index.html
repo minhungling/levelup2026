@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Programmatic Forest - D&D Board Game</title>
+    <style>
+       :root {
+          --hidden-display: none;
+        }
+
+        .hidden {
+            display: var(--hidden-display);
+        }
+    </style>
+    <!--CPM styling-->
+    <style>
+  /* Specifically targets the container for CPM */
+        #cpm-container {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            background: #121212;
+            margin-bottom: 15px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            /* Neon accent line */
+            border: 4px solid #00f2ff; 
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        /* Target the label specifically inside the CPM container */
+        #cpm-container label {
+            font-family: 'Arial Black', sans-serif;
+            font-size: 3rem;
+            color: #888;
+            letter-spacing: 3px;
+            margin-bottom: 5px;
+        }
+
+        /* Specifically targets the input by its ID */
+        #cpm {
+            background: transparent;
+            border: none;
+            color: #00f2ff; /* High energy cyan */
+            font-family: 'Courier New', monospace;
+            font-size: 3rem;
+            font-weight: bold;
+            width: 140px;
+            outline: none;
+            text-shadow: 0 0 10px rgba(0, 242, 255, 0.6);
+        }
+
+        /* Hover effect only for this specific ID */
+        #cpm-container:hover {
+            background: #1a1a1a;
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);
+        }
+</style>
+
+    <!--dice css-->
+    <style>
+        .dice-container {
+            background-color: #09330c00;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+            width: 300px;
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            padding-top: 40px;
+        }
+
+        .dice-internal-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* The Die Shadow */
+        .shadow {
+            width: 120px;
+            height: 30px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 50%;
+            filter: blur(8px);
+            margin-top: 10px;
+            transition: transform 0.6s;
+        }
+
+        /* The Die itself */
+        .d20 {
+            width: 180px;
+            height: 180px;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.1s;
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.3));
+        }
+
+        /* Creating the 3D Facet Effect via Linear Gradients */
+        .d20-shape {
+            width: 100%;
+            height: 100%;
+            background: 
+                /* Central Face */
+                radial-gradient(circle at 50% 50%, #f04e30 0%, #b22222 100%);
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Shading overlays to create 'edges' */
+        .d20-shape::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                linear-gradient(150deg, rgba(255,255,255,0.4) 15%, transparent 35%),
+                linear-gradient(-150deg, rgba(0,0,0,0.4) 15%, transparent 35%),
+                linear-gradient(0deg, rgba(0,0,0,0.2) 0%, transparent 25%);
+            pointer-events: none;
+        }
+
+        .number {
+            font-size: 4rem;
+            font-weight: 900;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        /* Animation */
+        .rolling {
+            animation: tumble 0.6s infinite ease-in-out;
+        }
+
+        .rolling-shadow {
+            animation: shadow-pulse 0.6s infinite ease-in-out;
+        }
+
+        @keyframes tumble {
+            0% { transform: translateY(0) rotate(0deg) scale(1); }
+            50% { transform: translateY(-40px) rotate(180deg) scale(1.1); }
+            100% { transform: translateY(0) rotate(360deg) scale(1); }
+        }
+
+        @keyframes shadow-pulse {
+            0%, 100% { transform: scale(1); opacity: 0.2; }
+            50% { transform: scale(0.7); opacity: 0.1; }
+        }
+
+        .dice-button {
+            padding: 12px 30px;
+            border-radius: 8px;
+            border: none;
+            background: #b22222;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px #7a1616;
+            cursor: pointer;
+        }
+
+        .dice-button:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px #7a1616;
+        }
+    </style>
+    <!--stat panel css-->
+    <style>
+        /* Container 2 layout */
+        .info-panel {
+        flex-direction: column; /* Stacks entries vertically */
+        padding: 20px;
+        align-items: flex-start; /* Aligns content to the left */
+        justify-content: flex-start;
+        }
+
+        /* Row styling for labels + inputs */
+        .entry-group {
+        width: 100%;
+        margin-bottom: 20px;
+        }
+
+        .entry {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        width: 100%;
+        }
+
+        .entry input {
+        width: 60%; /* Adjust based on preference */
+        }
+    </style>
+    <!-- board css-->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #0a1e0a 0%, #1a3a1a 50%, #2d5016 100%);
+            color: #e8f5e9;
+            overflow-x: hidden;
+            padding: 20px;
+        }
+
+        .game-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            color: #b19cd9;
+            text-shadow: 0 0 20px rgba(177, 156, 217, 0.6);
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.3em;
+            color: #81c784;
+            font-style: italic;
+        }
+
+        /* Board Game Container */
+        .board-game {
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(76, 175, 80, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(156, 39, 176, 0.1) 0%, transparent 50%),
+                rgba(0, 0, 0, 0.4);
+            border: 5px solid #4caf50;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 
+                0 0 40px rgba(76, 175, 80, 0.3),
+                inset 0 0 60px rgba(0, 0, 0, 0.5);
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        /* Decorative corners */
+        .board-game::before,
+        .board-game::after {
+            content: '🌲';
+            position: absolute;
+            font-size: 2em;
+            opacity: 0.3;
+        }
+
+        .board-game::before {
+            top: 10px;
+            left: 10px;
+        }
+
+        .board-game::after {
+            bottom: 10px;
+            right: 10px;
+        }
+
+        /* SVG Board */
+        svg {
+            width: 100%;
+            height: auto;
+            filter: drop-shadow(0 0 10px rgba(76, 175, 80, 0.2));
+        }
+
+        /* Board Space (tile) */
+        .board-space {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .board-space:hover .space-tile {
+            stroke-width: 4;
+            filter: drop-shadow(0 0 15px rgba(156, 39, 176, 0.8));
+        }
+
+        .board-space:hover .space-icon {
+            transform: scale(1.15);
+        }
+
+        /* Space tile states */
+        .space-tile {
+            stroke: #4caf50;
+            stroke-width: 3;
+            transition: all 0.3s ease;
+        }
+
+        .board-space.active .space-tile {
+            fill: #9c27b0;
+            stroke: #ce93d8;
+            stroke-width: 4;
+            filter: drop-shadow(0 0 20px rgba(156, 39, 176, 1));
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                filter: drop-shadow(0 0 15px rgba(156, 39, 176, 0.8));
+            }
+            50% { 
+                filter: drop-shadow(0 0 25px rgba(156, 39, 176, 1));
+            }
+        }
+
+        .board-space.visited .space-tile {
+            fill: #4caf50;
+            stroke: #81c784;
+        }
+
+        .board-space.visited .checkmark {
+            opacity: 1;
+        }
+
+        .checkmark {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Path connecting spaces */
+        .path-segment {
+            stroke: #4caf50;
+            stroke-width: 8;
+            fill: none;
+            stroke-dasharray: 15, 10;
+            opacity: 0.4;
+            animation: pathFlow 30s linear infinite;
+        }
+
+        @keyframes pathFlow {
+            to {
+                stroke-dashoffset: -1000;
+            }
+        }
+
+        .path-segment.active {
+            stroke: #9c27b0;
+            stroke-width: 10;
+            opacity: 0.8;
+            animation: pathFlow 15s linear infinite;
+        }
+
+        /* Decorative elements */
+        .decoration {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        /* Player token */
+        .player-token {
+            transition: all 0.5s ease;
+            filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
+        }
+
+        /* Dice decoration */
+        .dice {
+            animation: diceRoll 3s ease-in-out infinite;
+        }
+
+        @keyframes diceRoll {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(90deg); }
+            50% { transform: rotate(180deg); }
+            75% { transform: rotate(270deg); }
+        }
+
+        /* Progress tracker */
+        .progress-tracker {
+            background: rgba(0, 0, 0, 0.5);
+            border: 3px solid #4caf50;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .progress-tracker h3 {
+            color: #ce93d8;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .progress-step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+
+        .progress-step-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(76, 175, 80, 0.3);
+            border: 2px solid #4caf50;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 5px;
+            font-size: 1.2em;
+            transition: all 0.3s ease;
+        }
+
+        .progress-step.completed .progress-step-icon {
+            background: #4caf50;
+            border-color: #81c784;
+        }
+
+        .progress-step.active .progress-step-icon {
+            background: #9c27b0;
+            border-color: #ce93d8;
+            animation: pulse 2s infinite;
+        }
+
+        .progress-step-label {
+            font-size: 0.85em;
+            color: #a5d6a7;
+        }
+
+        .progress-connector {
+            flex: 1;
+            height: 2px;
+            background: rgba(76, 175, 80, 0.3);
+            position: relative;
+            top: -15px;
+        }
+
+        .progress-connector.completed {
+            background: #4caf50;
+        }
+
+        /* Info Panel */
+        .info-panel {
+            background: rgba(0, 0, 0, 0.6);
+            border: 3px solid #9c27b0;
+            border-radius: 15px;
+            padding: 30px;
+            min-height: 250px;
+            box-shadow: 0 0 30px rgba(156, 39, 176, 0.3);
+        }
+
+        .info-panel h2 {
+            color: #ce93d8;
+            font-size: 2em;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px rgba(206, 147, 216, 0.5);
+        }
+
+        .info-panel .duration {
+            color: #81c784;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        .info-panel .description {
+            line-height: 1.8;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+
+        .info-panel .teaches {
+            background: rgba(76, 175, 80, 0.15);
+            border-left: 4px solid #4caf50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .info-panel .teaches h3 {
+            color: #81c784;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        /* Navigation buttons */
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px;
+            flex-wrap: wrap;
+        }
+
+        .nav-button {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+            color: white;
+            border: 2px solid #ce93d8;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Georgia', serif;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(156, 39, 176, 0.4);
+        }
+
+        .nav-button:hover {
+            background: linear-gradient(135deg, #7b1fa2, #9c27b0);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(156, 39, 176, 0.6);
+        }
+
+        .nav-button:disabled {
+            background: rgba(76, 175, 80, 0.3);
+            border-color: #4caf50;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .nav-button.reset {
+            background: linear-gradient(135deg, #388e3c, #2e7d32);
+            border-color: #81c784;
+        }
+
+        .nav-button.reset:hover {
+            background: linear-gradient(135deg, #2e7d32, #388e3c);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2em; }
+            .board-game { padding: 20px; }
+            .progress-steps { flex-wrap: wrap; }
+            .nav-buttons { flex-direction: column; padding: 20px; }
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.95);
+            color: #e8f5e9;
+            padding: 12px 18px;
+            border-radius: 10px;
+            border: 2px solid #9c27b0;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+            max-width: 300px;
+            box-shadow: 0 0 20px rgba(156, 39, 176, 0.5);
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>🎲 The Programmatic Forest 🎲</h1>
+        </div>
+
+        <div class="progress-tracker">
+            <h3>🗺️ Quest Progress</h3>
+            <div class="progress-steps">
+                <div class="progress-step completed" id="progress-start">
+                    <div class="progress-step-icon">🚪</div>
+                    <div class="progress-step-label">Start</div>
+                </div>
+                <div class="progress-connector" id="connector1"></div>
+                <div class="progress-step" id="progress-scene1">
+                    <div class="progress-step-icon">🌳</div>
+                    <div class="progress-step-label">Scene 1</div>
+                </div>
+                <div class="progress-connector" id="connector2"></div>
+                <div class="progress-step" id="progress-scene2">
+                    <div class="progress-step-icon">📜</div>
+                    <div class="progress-step-label">Scene 2</div>
+                </div>
+                <div class="progress-connector" id="connector3"></div>
+                <div class="progress-step" id="progress-scene3">
+                    <div class="progress-step-icon">⚖️</div>
+                    <div class="progress-step-label">Scene 3</div>
+                </div>
+                <div class="progress-connector" id="connector4"></div>
+                <div class="progress-step" id="progress-scene4">
+                    <div class="progress-step-icon">👑</div>
+                    <div class="progress-step-label">Scene 4</div>
+                </div>
+                <div class="progress-connector" id="connector5"></div>
+                <div class="progress-step" id="progress-end">
+                    <div class="progress-step-icon">🏆</div>
+                    <div class="progress-step-label">Victory!</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-buttons">
+            <button class="nav-button" id="prevBtn" onclick="navigateSpace('prev')" disabled>
+                ⬅️ Previous Space
+            </button>
+            <button class="nav-button" id="nextBtn" onclick="navigateSpace('next')">
+                Next Space ➡️
+            </button>
+            <button class="nav-button" id ="challengeBtn" onclick="revealChallenge()" disabled>
+                ⚔️ Challenge
+            </button>
+        </div>
+
+        <div class="info-panel" id="infoPanel">
+            <h2>🌲 Welcome to the Programmatic Forest</h2>
+            <p class="duration">Click any space to explore • Duration: 10-15 minutes</p>
+            <p class="description">
+                You stand at the entrance to an ancient woodland where magical auctions determine 
+                which merchants can reach traveling souls. The forest's auctions happen faster than 
+                a heartbeat—but something has gone wrong. 
+            </p>
+            <p class="description">
+                Click on the board spaces above to follow the path and discover the secrets of 
+                Real-Time Bidding, Bid Requests, Bid Responses, and Private Marketplaces!
+            </p>
+            <div class="teaches">
+                <h3>🎯 Your Quest</h3>
+                <p>Investigate the mysterious auction failures and learn how programmatic advertising 
+                works in the digital realm. Each space on the board reveals a new chapter in your adventure!</p>
+            </div>
+        </div>
+        
+        <div id="summary" style="display:none; margin-top:10px">
+        </div>
+        <div class="board-game" style="display:none;">
+            <svg viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <!-- Gradient for spaces -->
+                    <linearGradient id="spaceGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:rgba(76, 175, 80, 0.3);stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:rgba(76, 175, 80, 0.5);stop-opacity:1" />
+                    </linearGradient>
+                    
+                    <linearGradient id="startGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#81c784;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#4caf50;stop-opacity:1" />
+                    </linearGradient>
+                    
+                    <linearGradient id="endGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#9c27b0;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#ce93d8;stop-opacity:1" />
+                    </linearGradient>
+
+                    <!-- Glow filter -->
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+
+                <!-- Background decorative elements -->
+                <g class="decoration">
+                    <!-- Trees -->
+                    <circle cx="100" cy="100" r="40" fill="#2d5016"/>
+                    <circle cx="150" cy="80" r="30" fill="#2d5016"/>
+                    <circle cx="1100" cy="100" r="45" fill="#2d5016"/>
+                    <circle cx="1050" cy="80" r="35" fill="#2d5016"/>
+                    <circle cx="100" cy="600" r="50" fill="#2d5016"/>
+                    <circle cx="1100" cy="600" r="50" fill="#2d5016"/>
+                    
+                    <!-- Dice -->
+                    <g class="dice" transform="translate(50, 350)">
+                        <rect width="30" height="30" rx="5" fill="#9c27b0" opacity="0.5"/>
+                        <circle cx="15" cy="15" r="3" fill="white"/>
+                    </g>
+                    
+                    <g class="dice" transform="translate(1120, 350)">
+                        <rect width="30" height="30" rx="5" fill="#9c27b0" opacity="0.5"/>
+                        <circle cx="10" cy="10" r="3" fill="white"/>
+                        <circle cx="20" cy="20" r="3" fill="white"/>
+                    </g>
+                </g>
+
+                <!-- Winding path connecting all spaces -->
+                <path id="path-full" class="path-segment" 
+                      d="M 150,600 
+                         Q 200,550 250,500 
+                         Q 300,450 350,420 
+                         Q 450,380 550,360 
+                         Q 650,340 700,330 
+                         Q 750,320 800,310 
+                         Q 900,280 950,250 
+                         Q 1000,220 1050,150" 
+                      stroke-linecap="round"/>
+
+                <!-- Individual path segments for progressive reveal -->
+                <path id="path1" class="path-segment" 
+                      d="M 150,600 Q 200,550 250,500 Q 300,450 350,420"/>
+                
+                <path id="path2" class="path-segment" 
+                      d="M 350,420 Q 450,380 550,360"/>
+                
+                <path id="path3" class="path-segment" 
+                      d="M 550,360 Q 650,340 700,330"/>
+                
+                <path id="path4" class="path-segment" 
+                      d="M 700,330 Q 750,320 800,310 Q 900,280 950,250"/>
+                
+                <path id="path5" class="path-segment" 
+                      d="M 950,250 Q 1000,220 1050,150"/>
+
+                <!-- BOARD SPACES -->
+
+                <!-- START - Forest Entrance -->
+                <g class="board-space visited active" id="start" data-location="start">
+                    <rect class="space-tile" x="105" y="555" width="90" height="90" 
+                          rx="10" fill="url(#startGradient)"/>
+                    <text class="space-icon" x="150" y="615" text-anchor="middle" 
+                          font-size="40" fill="white" filter="url(#glow)">🚪</text>
+                    <text x="150" y="575" text-anchor="middle" 
+                          font-size="14" fill="white" font-weight="bold">START</text>
+                    <text x="150" y="638" text-anchor="middle" 
+                          font-size="11" fill="white">Forest Entrance</text>
+                </g>
+
+                <!-- SPACE 1 - The Great Clearing -->
+                <g class="board-space" id="space1" data-location="clearing">
+                    <rect class="space-tile" x="305" y="375" width="90" height="90" 
+                          rx="10" fill="url(#spaceGradient)"/>
+                    <text class="space-icon" x="350" y="435" text-anchor="middle" 
+                          font-size="40" fill="#81c784">🌳</text>
+                    <circle class="checkmark" cx="375" cy="390" r="12" fill="#4caf50"/>
+                    <text class="checkmark" x="375" y="397" text-anchor="middle" 
+                          font-size="16" fill="white" font-weight="bold">✓</text>
+                    <text x="350" y="395" text-anchor="middle" 
+                          font-size="12" fill="#e8f5e9" font-weight="bold">SCENE 1</text>
+                    <text x="350" y="458" text-anchor="middle" 
+                          font-size="10" fill="#a5d6a7">Great Clearing</text>
+                </g>
+
+                <!-- SPACE 2 - Sacred Scrolls -->
+                <g class="board-space" id="space2" data-location="scrolls">
+                    <rect class="space-tile" x="505" y="315" width="90" height="90" 
+                          rx="10" fill="url(#spaceGradient)"/>
+                    <text class="space-icon" x="550" y="375" text-anchor="middle" 
+                          font-size="40" fill="#81c784">📜</text>
+                    <circle class="checkmark" cx="575" cy="330" r="12" fill="#4caf50"/>
+                    <text class="checkmark" x="575" y="337" text-anchor="middle" 
+                          font-size="16" fill="white" font-weight="bold">✓</text>
+                    <text x="550" y="335" text-anchor="middle" 
+                          font-size="12" fill="#e8f5e9" font-weight="bold">SCENE 2</text>
+                    <text x="550" y="398" text-anchor="middle" 
+                          font-size="10" fill="#a5d6a7">Sacred Scrolls</text>
+                </g>
+
+                <!-- SPACE 3 - The Auction -->
+                <g class="board-space" id="space3" data-location="auction">
+                    <rect class="space-tile" x="655" y="285" width="90" height="90" 
+                          rx="10" fill="url(#spaceGradient)"/>
+                    <text class="space-icon" x="700" y="345" text-anchor="middle" 
+                          font-size="40" fill="#81c784">⚖️</text>
+                    <circle class="checkmark" cx="725" cy="300" r="12" fill="#4caf50"/>
+                    <text class="checkmark" x="725" y="307" text-anchor="middle" 
+                          font-size="16" fill="white" font-weight="bold">✓</text>
+                    <text x="700" y="305" text-anchor="middle" 
+                          font-size="12" fill="#e8f5e9" font-weight="bold">SCENE 3</text>
+                    <text x="700" y="368" text-anchor="middle" 
+                          font-size="10" fill="#a5d6a7">The Auction</text>
+                </g>
+
+                <!-- SPACE 4 - Elder Grove -->
+                <g class="board-space" id="space4" data-location="elder">
+                    <rect class="space-tile" x="905" y="205" width="90" height="90" 
+                          rx="10" fill="url(#spaceGradient)"/>
+                    <text class="space-icon" x="950" y="265" text-anchor="middle" 
+                          font-size="40" fill="#81c784">👑</text>
+                    <circle class="checkmark" cx="975" cy="220" r="12" fill="#4caf50"/>
+                    <text class="checkmark" x="975" y="227" text-anchor="middle" 
+                          font-size="16" fill="white" font-weight="bold">✓</text>
+                    <text x="950" y="225" text-anchor="middle" 
+                          font-size="12" fill="#e8f5e9" font-weight="bold">SCENE 4</text>
+                    <text x="950" y="288" text-anchor="middle" 
+                          font-size="10" fill="#a5d6a7">Elder Grove</text>
+                </g>
+
+                <!-- END - Quest Complete -->
+                <g class="board-space" id="end" data-location="end">
+                    <rect class="space-tile" x="1010" y="110" width="90" height="90" 
+                          rx="10" fill="url(#endGradient)"/>
+                    <text class="space-icon" x="1055" y="170" text-anchor="middle" 
+                          font-size="40" fill="white" filter="url(#glow)">🏆</text>
+                    <text x="1055" y="130" text-anchor="middle" 
+                          font-size="14" fill="white" font-weight="bold">FINISH</text>
+                    <text x="1055" y="193" text-anchor="middle" 
+                          font-size="11" fill="white">Victory!</text>
+                </g>
+
+                <!-- Player Token -->
+                <g class="player-token" id="playerToken">
+                    <circle cx="150" cy="600" r="20" fill="#FFD700" stroke="#FFA500" stroke-width="3"/>
+                    <text x="150" y="608" text-anchor="middle" font-size="24" fill="#000">🧙</text>
+                </g>
+            </svg>
+        </div>
+
+        <div class="nav-buttons">
+            <button class="nav-button" id="mapBtn" onclick="toggleMap()">
+                🗺️ Summary
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        let character = {
+            cpm: 0,
+            stab: -3,
+            nature: 5,
+            discover: 3,
+            persuasion: 0,
+            subterfuge: -2
+        };
+
+        const spaces = {
+            home: {
+                title: "💻 Home office",
+                duration: "Teaches: Stranger danger",
+                description: "",
+                teaches: "Don't talk to strangers",
+                text: "The glow of the monitor is the only thing keeping the shadows at bay as you grind through the final hour of your shift. It’s the eve of the year's busiest weekend, and the pressure is suffocating—if you can just get these ads live, the site will finally start printing money. Your vision blurs, the lines of code swimming like ghosts across the screen.",
+                concern: "Just as your chin begins to dip and sleep threatens to claim you, a sharp, digital ping shatters the silence. A chat window snaps open, its stark white background searing your tired retinas. It contains a single, desperate plea: 'Help!' Your heart hammers against your ribs.",
+                challenge: "You reach for the keyboard, fingers hovering over the home row to demand an explanation, but a sudden, unnatural heaviness washes over you. It isn't just exhaustion; it’s a physical weight, cold and absolute. Before you can strike a single key, the office fades, the hum of the fan dies, and the world collapses into a terrifying, infinite black.",
+                image: "room.png",
+                challengeImage: "",
+                summary: "Don't talk to strangers<br>• But what if a stranger is just a friend you haven't met?<br><br><br><strong>Detailed Summary</strong><br><br>The initial danger of speaking to a stranger is, of course, the immediate threat to your social dignity. We’ve all been taught from birth that an unsolicited 'hello' from a passerby is the gateway drug to a thirty-minute critique of your choice in footwear. Safety experts agree: the moment you answer the question 'Do you have the time?', you have forfeited your right to peace and have entered a high-stakes game of conversational chicken where the only prize is an awkward exit strategy.<br><br>However, the peril deepens when you realize these 'strangers' are suspiciously well-distributed across the globe, almost as if they are operating on a synchronized grid. Have you ever noticed how a stranger always appears exactly when you are most vulnerable—holding two ice cream cones or struggling with a heavy door? This isn't coincidence. Their mundane inquiries about the weather are actually sophisticated acoustic pings designed to calibrate the vibration of your vocal cords for future synthesis.<br><br>The horrifying truth is that the creepy guy at the bus stop isn't a hitchhiker - he’s a sub-orbital scout measuring your carbon signature for the upcoming harvest. When they lure you in with a smile, they are scanning your retinas to ensure your neural pathways are compatible with the tractor beams of the Great Silver Disc. By the time you realize the conversation has gone on too long, it’s not because they’re lonely—it’s because the mothership is positioning itself over your suburban cul-de-sac to begin the probing. Remember: a greeting today is a probe tomorrow.",
+                position: {x:150, y:600}
+            },
+            start: {
+                title: "🚪 Forest Entrance",
+                duration: "Teaches: Advantages of Real-Time Bidding",
+                description: "",
+                teaches: "• The Advantages of Real-time Bidding (RTB)",
+                text: "The ancient Druid leans heavily on a staff of silvered oak, gesturing toward the dry, rocky ledge where a Great Waterfall once roared. 'Once, traveler, the font of our power was the living rush of water—a methodical flow of natural energy, where spells would flowed in sequence, preserving magic so that a spell would only be cast when the previous failed.' he rasps. 'But the world has changed. Now, we no longer tap the current; we bid upon it in real-time. We call to the aether, urging the spirits to gather their strength into a single, focused point. We call this Cumulative Precision Magic, or CPM. The higher your CPM, the more ancient and formidable the spirits you can beckon.'",
+                concern: "The Druid continues, his eyes clouding with sorrow, 'In the old days, magic was a rarified art, practiced by nobles in secluded walled gardens. But now, every commoner and charlatan casts their pittance into the winds. The forest is no longer filled with Great Spirits; it is choked by a swarm of low-quality peddlers of recipe blogs and listicles. They are noisy, frantic, and hollow. The true creatures of the woods cannot endure this miserable static. They are fleeing, and without their presence, the very heart of the forest is beginning to wither.' He turns to you, his grip tightening on his staff. 'You must become the exception. To save this place, you must gather a hoard of magic so pure and so vast that it silences the clamor of the rabble. Only then can you prove to the Greater Spirits that this forest is still a vessel worthy of their protection.'",
+                challenge: "But first, you must demonstrate that you grasp the true evolution of our craft. The old magic was a beautiful accident of nature, tidy and methodical, but slow and cumbersome. The new magic is a weapon of intent. Tell me: what are the three superior virtues that allow a single caster to silence the static of a thousand fools?'. You reach into your mind's eye to search for answers, but your memory is still cloudy from the journey.",
+                challengeImage: "advantages.png",
+                image: "entrance.png",
+                summary: "The Advantages of Real-time Bidding<br>• Data-Driven Bidding<br>• Efficiency<br>• Scale<br><br><br><strong>Detailed Summary</strong><br><br>The ad industry was historically managed by Waterfall bidding, where a request would go to the most valuable demand source, if they did not bid, a request would then go out to the second more valuable, and this would continue until one returned a bid. This was slow, difficult to optimize, and prioritized based on historical values rather than current value.<br><br>Real-time Bidding is an evolution of  waterfall bidding, allowing publishers to reach out to multiple demand sources simultaneously. It allows for more targeted advertising, using data to help identify the user's interests, more efficiency, letting advertisers target more specific inventory and users, and scale, allowing platforms to more easily access thousands of publishers.",
+                position: { x: 150, y: 600 }
+            },
+            clearing: {
+                title: "🌳 The Great Clearing",
+                duration: "Teaches: What Real-Time Bidding is",
+                description: "",
+                teaches: "• What is Real-Time Bidding?<br>• How does the RTB work?<br>• Who makes up the RTB ecosystem?",
+                text: "The path opens to The Great Clearing, the central nervous system of the forest's magic, where the RTB protocol serves as the universal language. Here, hundreds of spectral merchants - the Supply Side Phantoms (SSPs) - stand atop shimmering pedestals, clutching guiding magic to billions of spirits. Every time a spirit reaches out, a flare of light shoots into the air, signaling the start of a frantic, invisible race. You watch as the Keeper of the Grove orchestrates these moments, acting as the Grand Exchange to ensure that the ancient laws of the OpenRTB Consortium are followed, allowing for seamless, automated communication between all magical platforms.",
+                concern: "The Keeper looks to you grimly. 'In the old world, we had time to negotiate, but here, the entire ritual must be completed within 100 to 150 milliseconds. If the chain is interrupted - a spell sent to the wrong realm or a response returns a heartbeat too late - the magic fizzles into grey ash.",
+                challenge: "The Keeper strikes his staff against the earth, and nine fragmented runes of light crystallize in the air between you. 'To stabilize The Great Clearing and dispel the Static, you must master the RTB Ritual and ignite the Auction Spell. Align each of the nine runes in the exact order the spirits demand before the 100th grain of sand falls!'",
+                image: "clearing.png",
+                challengeImage: "order.png",
+                summary: 'What is Real-Time Bidding?<br>• A programmatic advertising protocol that automates auctions to buy and sell digital ad impressions in milliseconds as a page loads.<br><br>How does RTB work?<br>1. User visits webpage.<br>2. Page sends ad request<br>3. No direct campaign found.<br>4. SSP sends a request.<br>5. DSP evalute, return bids<br>6. Ad exchange selects winner<br>7. DSP sends ad markup<br>8. Browser retrieves ad creative<br>9. Ad displays, pixels fired<br><br>Who makes up the RTB ecosystem?<br>• Publishers, advertisers, DSPs (buy side), SSPs (sell side), and ad exchanges.<br><br><br><strong>Detailed Summary</strong><br>Real-Time Bidding (RTB) is a programmatic advertising protocol that allows advertisers to buy individual digital ad impressions through automated, real-time auctions that occur whenever a user loads a webpage or app.<br><br>Developed in the late 2000s to solve inefficiencies in early ad networks, RTB uses a marketplace structure similar to a stock exchange. Instead of purchasing large blocks of ad inventory in advance, advertisers bid on each impression as it becomes available. This process is facilitated by supply-side platforms (SSPs), which represent publishers’ inventory, demand-side platforms (DSPs) used by advertisers to place bids, and ad exchanges that conduct the auctions.<br<br>When a user visits a webpage, an ad request is sent to the publisher’s ad server. If no direct campaign fills the placement, the request is passed to an SSP, which sends a bid request containing user and page data to multiple DSPs through an ad exchange. Advertisers evaluate the opportunity using targeting data (such as demographics, device type, location, and behavior) and submit bids. The ad exchange selects the highest bid (often using a second-price auction) and notifies the winning DSP. The DSP then sends the ad markup to the user’s browser, which retrieves the ad creative from the DSP’s ad server, displays the ad, and fires impression-tracking pixels. The entire process typically occurs within 100-150 milliseconds. Faster than the blink of an eye!<br><br>RTB enables data-driven targeting, improved efficiency, and massive scale, allowing advertisers to pay only for impressions that match their criteria while giving publishers access to a global pool of demand across display, video, mobile, and connected TV inventory.',
+                position: { x: 350, y: 420 }
+            },
+            scrolls: {
+                title: "📜 The Grand Archive",
+                duration: "Teaches: Bid Requests",
+                description: "",
+                teaches: "• What is a Bid Request?<br>• What information does a bid request contain?<br>• Why are bid requests important in RTB?",
+                text: "The air in the Grand Archive is thick enough to taste, shimmering with the metallic tang of static and the scent of aged parchment. Thousands of scrolls line the walls, wedged into mahogany honeycombs that reach so high, the ceiling is lost in a haze of golden dust. In the center of the room stands the Keeper, a figure draped in robes that seem to be woven from shifting ink, standing before a massive stone plinth that radiates a faint, expectant light.",
+                concern: "The Keeper gestures to a blank, uncharged scroll resting upon the stone. 'The Bidding has left us blind,' the Keeper whispers, their voice echoing like rustling paper. 'Cut through the mist and find the most valuable targets, we must craft a Master Record, but the ancient sigils required have been scattered to the four winds. I have gathered what shards I could, but the Archive is cluttered with false symbols and echoes of mediocre spells.'",
+                challenge: "'To ignite the power of this scroll, you must find the five Pillars of Connection and imbue their sigils into its fibers,' the Keeper commands, gesturing toward a floating array of glowing glyphs. 'Choose wrongly, and you will be left aiming blindly into the wild, wasting magic on calls that will never be answered. Choose carefully, your CPM is meaningless if you cannot identify the spirit you are aiming at.'",
+                image: "scroll.png",
+                challengeImage: "sigil.png",
+                summary: 'What is a Bid Request?<br>• A JSON message sent in RTB that describes an available ad impression to advertisers.<br><br>What information does a bid request contain?<br>• Details about the impression, device, user, location, and publisher.<br><br>Why are bid requests important in RTB?<br>• They provide the context DSPs need to evaluate the impression and decide whether and how much to bid.<br><br><br><strong>Detailed Summary</strong><br><br>Bid Requests are structured messages used in real-time bidding (RTB) to communicate details about an available ad impression to potential advertisers. They are typically formatted in JSON and follow the OpenRTB specification, which standardizes how ad opportunities are described and exchanged between platforms.<br><br>Each bid request contains a set of objects that provide contextual information about the ad placement, the user, and the device. This information helps demand-side platforms (DSPs) evaluate the opportunity and decide whether to bid and how much to offer.<br><br>Common OpenRTB object types are:<br>• Impression (Imp): Defines the ad opportunity, including the impression ID, ad format (banner, video, or native), and size.<br>• Device: Provides details about the user’s device, such as operating system, user agent, location, and device model.<br>• User: Includes available user identifiers and demographic information like gender or year of birth.<br>• Geo: Contains geographic data such as latitude, longitude, country, and region.<br>• Publisher: Identifies the publisher and site where the ad will appear, including domain, name, and optional audience segments.<br><br>Together, these objects give DSPs the context needed to assess the value of an impression and make data-driven bidding decisions in real time.',
+                position: { x: 550, y: 360 }
+            },
+            auction: {
+                title: "⚖️ The Auction Battle",
+                duration: "Teaches: Bid Responses",
+                description: "",
+                teaches: "• What is a Bid Response?<br>• What information does a bid response contain?<br>• Why are bid responses important in RTB?",
+                text: "The transition from the quiet, dusty archive to the Gilded Gavel Auction House is a sensory assault. The air is thick with the smell of expensive tobacco and desperate sweat, vibrating with the roar of a rowdy, unwashed crowd of bidders. At the center of the chaos stands the Auctioneer—a man with a smile as sharp as a razor and eyes that never stop moving. 'Welcome to the real world, initiate!' he shrieks over the din, slamming his mallet. 'In the old gardens, they ran a Second Price auction—letting the runner-up set the cost. Soft! Weak! Here, we use the First Price auction. You pay exactly what you bid. We're not here for silly games!'",
+                concern: "But the Auctioneer’s grin hides a lethal trap. He leans over the podium, his voice dropping to a conspiratorial hiss. 'But there's the catch, the window to bid is shorter than a heartbeat, and the spirits are fickle. There is a timeout on every lot, but you won't know what it is until it's too late. Cast your spell, but be quick! If you hit that timeout before your bid is cast, you get nothing and your lot is lost to the void.'",
+                challenge: "Suddenly, the roaring crowd smears into a blur of grey as the Bidding begins. Time itself seems to grind to a halt, stretching out in agonizing 25-millisecond intervals. With every pulse of your heart, the spirits ask: are you ready? You must now channel your magic, weaving a bridge between your intent and their ancient realm, inscribed in the Sacred Script of JSON. To complete the ritual you must identify the two components needed for the spirits to receive the spell. As the energy hums between your fingers, you feel their cold collective gaze awaiting your response.",
+                image: "auction.png",
+                challengeImage: "spell.png",
+                summary: 'What is a Bid Response?<br>• A JSON reply from a DSP indicating whether it will bid on an ad impression.<br><br>What information does a bid response contain?<br>• The bid price and the ad creative / markup to display if the bid wins.<br><br>Why are bid responses important in RTB?<br>• They allow the ad exchange to compare bids and select the winning ad for the impression.<br><br><br><strong>Detailed Summary</strong><br><br>Bid Responses are the replies sent by demand-side platforms (DSPs) after receiving a bid request in a real-time bidding (RTB) auction. Like bid requests, bid responses are formatted in JSON and follow the OpenRTB specification, which standardizes how platforms communicate during programmatic ad transactions.<br><br>After evaluating the information provided in the bid request (such as details about the impression, device, user, geographic location, and publisher), the DSP decides whether to participate in the auction. If it chooses to bid, the DSP sends a bid response that includes the bid price and the ad creative or markup that could be served if the bid wins.<br><br>These responses allow the ad exchange to compare bids from multiple advertisers and select the winning bid. If selected, the winning ad is delivered to the user’s browser and displayed on the webpage or app. Bid responses therefore play a key role in enabling data-driven, real-time decisions about which ads are shown and how much advertisers are willing to pay for each impression.',
+                position: { x: 700, y: 330 }
+            },
+            elder: {
+                title: "👑 The Elder Grove",
+                duration: "Teaches: Private Marketplaces",
+                description: "",
+                teaches: "• What is a Private Marketplace (PMP)?<br>• What advantages do PMPs provide?<br>• Why are PMPs important in RTB?",
+                text: "'Initiate, your ascent has not gone unnoticed,' a high-ranking Druid whispers, pressing a crystalline tablet into your palm. On its surface, a shifting, intricate geometric pattern of light serves as your Deal ID—a golden invitation to the Elder Grove’s Private Marketplace. As you grasp it, the air thrums around you, and a portal of interwoven, glowing roots begins to open.",
+                concern: "You step through the root-portal and find yourself in a silent, misty amphitheater. It is far removed from the rowdy auction house. There is no crowd, and the sensory overload is replaced by a profound, focused calm. You count only three other competitors, each draped in robes of absolute black. Here, exclusive premium spirits await your call. These powerful entities do not respond to simple scale; they seek precise alignment. They only accept those who have earned the right to bid on them.",
+                challenge: "Suddenly, a winding path leading to a colossal nexus erupts from the mist. To gather the power you need, you must navigate this path, guided only by the cryptic inscriptions. Each branch tests your mastery of the Private Exchange; every mistake you make ripping more magic away from your hands. A map forms in your head and the nexus awaits.<br><br> You can feel energy coursing through your body and even so, you have a sense this metaphor is rapidly falling apart. Cryptiv reminders start to flow into your mind: <br>• spirits are ad slots <br>• magic is made of a bid request and response",
+                image: "grove.png",
+                challengeImage: "map.png",
+                summary: 'What is a Private Marketplace (PMP)?<br>• An invite-only RTB auction where selected advertisers bid on a publisher’s premium ad inventory using Deal IDs.<br><br>What advantages do PMPs provide?<br>• Higher-quality, brand-safe placements for advertisers<br>• Better transparency on placements<br>• More control over where ads appear<br>• Higher CPMs<br>• Selective access<br><br>Why are PMPs important in RTB?<br>• They balance the scale of open auctions with the control and quality of direct deals.<br><br><br><strong>Detailed Summary</strong><br><br>Private Marketplace (PMPs) are invite-only RTB environments where premium publishers offer exclusive, early access to their top-tier inventory before it reaches the open market. Advertisers are granted Deal IDs that let them bid on this curated supply. For advertisers, PMPs provide access to brand-safe, high-quality placements with greater transparency and control over where ads appear. For publishers, PMPs command higher CPMs, allow selective control over which advertisers participate, and support custom deal packaging by format, audience, or content category. PMPs serve as a middle ground between open RTB (broad reach, less control) and programmatic direct (fully reserved deals), balancing scale with quality.',
+                position: { x: 950, y: 250 }
+            },
+            end: {
+                title: "🏆 Quest Complete!",
+                duration: "Teaches: Nothing! You win!",
+                description: "",
+                teaches: "<strong>You Have Now Mastered:</strong><br>• The advantages of real-time bidding compared to waterfalls<br>• What real-time bidding is<br>• Components and function of bid requests<br>• Components and function of bid responses<br>• Private Marketplaces (PMPs)",
+                text: "As the final symbols of the JSON script lock into place, the air fractures with a blinding flash of violet light. The spirits, satisfied by your offering of gold and illusion, surge forward in a silent, rushing gale—not to consume you, but to merge with your intent. The grey blur of the bidding floor begins to spin, faster and faster, until the roar of the crowd becomes the steady, rhythmic hum of a cooling fan.",
+                concern: "You blink, the stinging scent of ozone replaced by the familiar aroma of lukewarm coffee. You are back at your desk, the glow of the monitor washing over your face. There, on the screen, the complex architecture of the site is perfectly aligned, the bids flowing with a precision that seems almost supernatural.",
+                challenge: "Work complete, you go to sleep, knowing that while you've achieved your goals, the real treasure was the friends you made along the way.",
+                image: "balance.png",
+                challengeImage: "",
+                summary: 'Go back through the summaries of previous chapters for detailed information on everything we learned.',
+                position: { x: 1055, y: 155 }
+            }
+        };
+
+        const journey = ['home','start', 'clearing', 'scrolls', 'auction', 'elder', 'end'];
+        let currentIndex = 0;
+        let currentSpace = 'home';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateInfoPanel('home');
+            updateProgressBar();
+            
+            // Add click handlers
+            document.querySelectorAll('.board-space').forEach(space => {
+                space.addEventListener('click', function() {
+                    const location = this.getAttribute('data-location');
+                    goToSpace(location);
+                });
+
+                space.addEventListener('mouseenter', function(e) {
+                    const location = this.getAttribute('data-location');
+                    showTooltip(e, spaces[location].title);
+                });
+
+                space.addEventListener('mouseleave', hideTooltip);
+            });
+        });
+
+        function revealChallenge() {
+            document.getElementById('upper-section').style.display = 'none';
+            document.getElementById('default-image').style.display = 'none';
+            document.getElementById('challenge-image').style.display = 'block';
+        }
+
+        function setUpTextboxStorage() {
+            // 1. Select ALL textboxes with the specific class
+            const allTextBoxes = document.querySelectorAll('.stat-text');
+
+            // 3. Loop through each textbox
+            allTextBoxes.forEach((textBox) => {
+                textBox.addEventListener('input', (event) => {
+                    const id = event.target.id;
+                    character[id] = event.target.value;
+                });
+            });
+        }
+        
+        function toggleMap() {
+            document.getElementById('mapBtn').style.display = 'none';
+            let map = document.getElementById('summary');
+            if (map.style.display == "none") {
+                map.style.display = "block";
+                return
+            }
+            map.style.display = "none";
+        }
+
+        function roll() {
+            const d20 = document.getElementById('d20');
+            const shadow = document.getElementById('shadow');
+            const numDisplay = document.getElementById('number');
+            
+            d20.classList.add('rolling');
+            shadow.classList.add('rolling-shadow');
+
+            let count = 0;
+            const interval = setInterval(() => {
+                numDisplay.innerText = Math.floor(Math.random() * 20) + 1;
+                count++;
+            }, 60);
+
+            setTimeout(() => {
+                clearInterval(interval);
+                d20.classList.remove('rolling');
+                shadow.classList.remove('rolling-shadow');
+                numDisplay.innerText = Math.floor(Math.random() * 20) + 1;
+            }, 1200);
+        }
+
+        function navigateSpace(direction) {
+            document.documentElement.style.setProperty('--hidden-display', 'block');
+            if (direction === 'next' && currentIndex < journey.length - 1) {
+                currentIndex++;
+            } else if (direction === 'prev' && currentIndex > 0) {
+                currentIndex--;
+            }
+            
+            currentSpace = journey[currentIndex];
+            goToSpace(currentSpace);
+        }
+
+        function goToSpace(location) {
+            currentSpace = location;
+            currentIndex = journey.indexOf(location);
+            
+            // Update all spaces
+            document.querySelectorAll('.board-space').forEach(space => {
+                space.classList.remove('active');
+            });
+            
+            // Mark current as active
+            const currentNode = document.getElementById(getSpaceId(location));
+            if (currentNode) {
+                currentNode.classList.add('active');
+            }
+            
+            // Mark all previous as visited
+            for (let i = 0; i <= currentIndex; i++) {
+                const spaceId = getSpaceId(journey[i]);
+                const space = document.getElementById(spaceId);
+                if (space) {
+                    space.classList.add('visited');
+                }
+            }
+            
+            // Update paths
+            updatePaths();
+            
+            // Move player token
+            movePlayerToken(location);
+            
+            // Update info
+            updateInfoPanel(location);
+            updateProgressBar();
+            
+            // Update buttons
+            document.getElementById('challengeBtn').disabled = !(['start','clearing', 'scrolls', 'auction', 'elder']).includes(location);
+            document.getElementById('mapBtn').style.display = 'block';
+            document.getElementById('summary').style.display = 'none';
+            document.getElementById('prevBtn').disabled = currentIndex === 0;
+            document.getElementById('nextBtn').disabled = currentIndex === journey.length - 1;
+        }
+
+        function getSpaceId(location) {
+            const mapping = {
+                'home': 'home',
+                'start': 'start',
+                'clearing': 'space1',
+                'scrolls': 'space2',
+                'auction': 'space3',
+                'elder': 'space4',
+                'end': 'end'
+            };
+            return mapping[location];
+        }
+
+        function updatePaths() {
+            document.querySelectorAll('.path-segment').forEach((path, index) => {
+                if (index < currentIndex) {
+                    path.classList.add('active');
+                } else {
+                    path.classList.remove('active');
+                }
+            });
+        }
+
+        function movePlayerToken(location) {
+            const pos = spaces[location].position;
+            const token = document.getElementById('playerToken');
+            token.innerHTML = `
+                <circle cx="${pos.x}" cy="${pos.y}" r="20" fill="#FFD700" stroke="#FFA500" stroke-width="3"/>
+                <text x="${pos.x}" y="${pos.y + 8}" text-anchor="middle" font-size="24" fill="#000">🧙</text>
+            `;
+        }
+
+        function updateInfoPanel(location) {
+            const info = spaces[location];
+            const panel = document.getElementById('infoPanel');
+            
+            panel.innerHTML = `
+                <h2>${info.title}</h2>
+                <div id="upper-section">
+                    <p class="duration">${info.duration}</p>
+                    <p class="description">${info.description}</p>
+                    <div class="teaches">
+                        <h3>🎓 What You Learn</h3>
+                        <p>${info.teaches}</p>
+                    </div>
+                    <p style="padding: 20px">${info.text}</p>
+                    <p style="padding: 20px">${info.concern}</p>
+                </div>
+                    <p style="padding: 20px">${info.challenge}</p>
+                <div style="display: flex; width:100%">
+                    <img id="default-image" style="width: 65%; object-fit: contain;" src=${info.image}></img>
+                    <img id="challenge-image" style="width: 65%; object-fit: contain; display: none" src=${info.challengeImage}></img>
+                    <div class="info-panel hidden">
+                        <div class="entry-group">
+                            <div class="entry" id="cpm-container"><label>CPM</label><input class="stat-text" id="cpm" style="text-align: center;" type="text" value=${character.cpm}></div>
+                            <div class="entry"><label>Stab</label><input class="stat-text" id="stab" style="text-align: center;" type="text" value=${character.stab}></div>
+                            <div class="entry"><label>Nature</label><input class="stat-text" id="nature" style="text-align: center;" type="text" value=${character.nature}></div>
+                            <div class="entry"><label>Discover</label><input class="stat-text" id="discover" style="text-align: center;" type="text" value=${character.discover}></div>
+                            <div class="entry"><label>Persuasion</label><input class="stat-text" id="persuasion" style="text-align: center;" type="text" value=${character.persuasion}></div>
+                            <div class="entry"><label>Subterfuge</label><input class="stat-text" id="subterfuge" style="text-align: center;" type="text" value=${character.subterfuge}></div>
+                        </div>
+                        <div class="dice-container">
+                            <div class="dice-internal-container">
+                                <div class="d20" id="d20">
+                                    <div class="d20-shape">
+                                        <span class="number" id="number">20</span>
+                                    </div>
+                                </div>
+                                <div class="shadow" id="shadow"></div>
+                            </div>
+                            <button class = 'dice-button' onclick="roll()">ROLL</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            setUpTextboxStorage();
+
+            let summaryPanel = document.getElementById('summary');
+            summaryPanel.innerHTML = `
+                    <div class="info-panel"><div class="teaches">
+
+                <h3>🎓 Summary </h3>
+                <p>${info.summary}</p>
+                </div></div>
+            `
+        }
+
+        function updateProgressBar() {
+            // Update progress steps
+            journey.forEach((space, index) => {
+                const progressId = space === 'start' ? 'progress-start' : 
+                                  space === 'end' ? 'progress-end' : 
+                                  `progress-${space}`;
+                const element = document.getElementById(progressId);
+                
+                if (element) {
+                    element.classList.remove('active', 'completed');
+                    if (index < currentIndex) {
+                        element.classList.add('completed');
+                    } else if (index === currentIndex) {
+                        element.classList.add('active');
+                    }
+                }
+            });
+
+            // Update connectors
+            for (let i = 1; i <= 5; i++) {
+                const connector = document.getElementById(`connector${i}`);
+                if (connector) {
+                    if (i < currentIndex) {
+                        connector.classList.add('completed');
+                    } else {
+                        connector.classList.remove('completed');
+                    }
+                }
+            }
+        }
+
+        // Tooltip functions
+        function showTooltip(event, text) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.textContent = text;
+            tooltip.classList.add('show');
+            updateTooltipPosition(event);
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').classList.remove('show');
+        }
+
+        function updateTooltipPosition(event) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.style.left = event.pageX + 15 + 'px';
+            tooltip.style.top = event.pageY + 15 + 'px';
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            if (document.getElementById('tooltip').classList.contains('show')) {
+                updateTooltipPosition(e);
+            }
+        });
+    </script>
+</body>
+</html>
